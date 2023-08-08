@@ -2,7 +2,12 @@
 const inputFfile = document.getElementById('file');
 const loader = document.getElementById('loader');
 const labelFigure = document.getElementById('label-figure');
+const downloadLInk = document.getElementById("download");
+const buttons = document.getElementById("buttons");
+
+
 let file_to_base64 = null;
+let file_url = null;
 
 // get file
 inputFfile.addEventListener('change', (e) => {
@@ -20,10 +25,11 @@ inputFfile.addEventListener('change', (e) => {
         
         
         if (file_to_base64) {
-            getData();
+            getDocument(file_to_base64);
         }
     };
     reader.readAsDataURL(file);
+    file_url = URL.createObjectURL(file);
 
     toggleStyle(); 
 });
@@ -40,44 +46,107 @@ const toggleStyle = () => {
 // he workerSrc property shall be specified.
 pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.js';
 
-const getData = async () => {
-    const pdfData = atob(file_to_base64)
- 
-console.log(pdfData);
-// Using DocumentInitParameters object to load binary data.
-var loadingTask = pdfjsLib.getDocument({data: pdfData});
+var pdfDoc = null,
+    pageNum = 1,
+    pageRendering = false,
+    pageNumPending = null,
+    scale = 1,
+    canvas = document.getElementById('the-canvas'),
+    ctx = canvas.getContext('2d');
 
+/**
+ * Get page info from document, resize canvas accordingly, and render page.
+ * @param num Page number.
+ */
+function renderPage(num) {
+  pageRendering = true;
+  // Using promise to fetch the page
+  pdfDoc.getPage(num).then(function(page) {
+    var viewport = page.getViewport({scale: scale});
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
 
-loadingTask.promise.then(function(pdf) {
-    console.log('PDF loaded');
-    loader.style.display = "none";
-	
-	// Fetch the first page
-	var pageNumber = 1;
-	pdf.getPage(pageNumber).then(function(page) {
-		console.log('Page loaded');
-		
-		var scale = 1.5;
-		var viewport = page.getViewport({scale: scale});
-		
-		// Prepare canvas using PDF page dimensions
-		var canvas = document.getElementById('the-canvas');
-		var context = canvas.getContext('2d');
-		canvas.height = viewport.height;
-		canvas.width = viewport.width;
-		
-		// Render PDF page into canvas context
-		var renderContext = {
-			canvasContext: context,
-			viewport: viewport
-		};
-		var renderTask = page.render(renderContext);
-		renderTask.promise.then(function () {
-			console.log('Page rendered');
-		});
-	});
-}, function (reason) {
-	// PDF loading error
-	console.error(reason);
-});
+    // Render PDF page into canvas context
+    var renderContext = {
+      canvasContext: ctx,
+      viewport: viewport
+    };
+    var renderTask = page.render(renderContext);
+
+    // Wait for rendering to finish
+    renderTask.promise.then(function() {
+      pageRendering = false;
+      if (pageNumPending !== null) {
+        // New page rendering is pending
+        renderPage(pageNumPending);
+        pageNumPending = null;
+      }
+    });
+  });
+
+  // Update page counters
+  document.getElementById('page_num').textContent = num;
 }
+
+/**
+ * If another page rendering in progress, waits until the rendering is
+ * finised. Otherwise, executes rendering immediately.
+ */
+function queueRenderPage(num) {
+  if (pageRendering) {
+    pageNumPending = num;
+  } else {
+    renderPage(num);
+  }
+}
+
+/**
+ * Displays previous page.
+ */
+function onPrevPage() {
+  if (pageNum <= 1) {
+    return;
+  }
+  pageNum--;
+  queueRenderPage(pageNum);
+}
+document.getElementById('prev').addEventListener('click', onPrevPage);
+
+/**
+ * Displays next page.
+ */
+function onNextPage() {
+  if (pageNum >= pdfDoc.numPages) {
+    return;
+  }
+  pageNum++;
+  queueRenderPage(pageNum);
+}
+document.getElementById('next').addEventListener('click', onNextPage);
+
+/**
+ * Asynchronously downloads PDF.
+ */
+
+const getDocument = (pdfData) => {
+    console.log(pdfData);
+    pdfData = atob(pdfData);
+    var loadingTask = pdfjsLib.getDocument({ data: pdfData });
+
+    loadingTask.promise.then(function (pdfDoc_) {
+        loader.style.display = "none";
+        buttons.style.display = "block";
+        downloadLInk.style.display = "block";
+        pdfDoc = pdfDoc_;
+        document.getElementById('page_count').textContent = pdfDoc.numPages;
+        // Initial/first page rendering
+        renderPage(pageNum);
+    });
+}
+
+
+// download current pdf
+
+downloadLInk.addEventListener('click', () => {
+    downloadLInk.href = file_url;
+})

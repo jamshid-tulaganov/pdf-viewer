@@ -15,25 +15,41 @@
     <title>Pdf Viewer</title>
   </head>
   <body>
-    <div class="pdf-viewer"> 
-      <h1 class="pdf-viewer__title">Pdf Viewer</h1>
+    <div class="pdf-viewer">
+      <nav class="pdf-viewer__nav">
+        <h1 class="pdf-viewer__title">Pdf Viewer</h1>
+
+        <div class="buttons" id="buttons">
+          <button id="prev"><i class="fa-solid fa-arrow-left"></i> Prev Page</button>
+          <button id="next">Next Page <i class="fa-solid fa-arrow-right"></i></button>
+          <span class="pdf-viewer__breads">Page: <span id="page_num"></span> / <span id="page_count"></span></span>
+        </div>
+
+        <!-- download -->
+
+        <a href="#" class="pdf-viewer__download" download="file.pdf" id="download">
+          <i class="fa-solid fa-download fa-bounce"></i>
+        </a>
+      </nav>
 
       <div class="pdf-viewer__figure">
         <label class="pdf-viewer__label" id="label-figure">
           <span>Upload your file</span>
           <i class="fa-solid fa-file-pdf"></i>
-          <input type="file" accept=".pdf" class="visibilty-hidden" id="file"  />
+          <input type="file" accept=".pdf" class="visibilty-hidden" id="file" />
         </label>
 
         <!-- if file approach loading is showed -->
-        <div class="loader" id="loader" >
+        <div class="loader" id="loader">
           <i class="fa-solid fa-spinner fa-spin"></i>
         </div>
       </div>
     </div>
 
     <!-- view the pdf in the canvas -->
-    <canvas id="the-canvas"></canvas>
+    <div class="canvas-wrapper">
+      <canvas id="the-canvas"></canvas>
+    </div>
 
     <script src="./js/file.js"></script>
   </body>
